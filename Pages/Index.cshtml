@@ -1,0 +1,169 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<script src="~/js/pixi.js"></script>
+
+<script type="text/javascript">
+    let type = "WebGL"
+    if (!PIXI.utils.isWebGLSupported()) {
+        type = "canvas"
+    }
+
+    PIXI.utils.sayHello(type)
+
+    //Create a Pixi Application
+    let app = new PIXI.Application({
+        width: 1000,
+        height: 1000
+    });
+    app.renderer.autoResize = true;
+
+    //Add the canvas that Pixi automatically created for you to the HTML document
+    document.body.appendChild(app.view);
+
+    function drawGrid() {
+        let myGraph = new PIXI.Graphics();
+        app.stage.addChild(myGraph);
+        myGraph.position.set(0, 0);
+        for (x = 0; x < 1000; x += 50) {
+            myGraph.lineStyle(1, 0xffffff)
+                .moveTo(x, 0)
+                .lineTo(x, 1000);
+        }
+        for (y = 0; y < 1000; y += 50) {
+            myGraph.lineStyle(1, 0xffffff)
+                .moveTo(0, y)
+                .lineTo(1000, y);
+        }
+    }
+    drawGrid()
+
+    PIXI.loader
+        .add("images/ship.png")
+        .add("images/bomb.png")
+        .add("images/explosion.png")
+        .load(setup);
+
+    let readyToDraw = false;
+    function setup() {
+        readyToDraw = true;
+    }
+
+    function drawMap(mapJson) {
+        if (!readyToDraw) {
+            return;
+        }
+
+        app.stage = new PIXI.Container();
+        drawGrid();
+
+        var map = JSON.parse(mapJson);
+        for (x = 0; x < map.length; x++) {
+            for (y = 0; y < map[x].length; y++) {
+                for (iObj = 0; iObj < map[x][y].length; iObj++) {
+                    let obj = map[x][y][iObj];
+                    if (obj.type == "ship") {
+                        let ship = new PIXI.Sprite(PIXI.loader.resources["images/ship.png"].texture);
+                        ship.width = 49;
+                        ship.height = 49;
+                        ship.x = 50 * x;
+                        ship.y = 50 * y;
+                        app.stage.addChild(ship);
+
+                        var playerName = new PIXI.Text(obj.owner, { font: 'Arial', fill: '#cc00ff', align: 'center' });
+                        playerName.x = 50 * x;
+                        playerName.y = 50 * y + 25;
+                        playerName.width = 49;
+                        app.stage.addChild(playerName);
+                    }
+                    if (obj.type == "bomb") {
+                        let myUser = document.getElementById("userNameTextArea").value;
+                        let bomb = new PIXI.Sprite(PIXI.loader.resources["images/bomb.png"].texture);
+                        bomb.width = 49;
+                        bomb.height = 49;
+                        bomb.x = 50 * x;
+                        bomb.y = 50 * y;
+                        app.stage.addChild(bomb);
+
+                        let myGraph = new PIXI.Graphics();
+                        app.stage.addChild(myGraph);
+                        myGraph.position.set(0, 0);
+                        color = myUser == obj.owner ? 0x66ff66 : 0xff0000;
+                        myGraph.lineStyle(2, color)
+                            .moveTo(bomb.x - 100, bomb.y - 100)
+                            .lineTo(bomb.x + 150, bomb.y - 100)
+                            .lineTo(bomb.x + 150, bomb.y + 150)
+                            .lineTo(bomb.x - 100, bomb.y + 150)
+                            .lineTo(bomb.x - 100, bomb.y - 100);
+                    }
+                    if (obj.type == "explosion") {
+                        let explosion = new PIXI.Sprite(PIXI.loader.resources["images/explosion.png"].texture);
+                        explosion.anchor.set(0.5);
+                        explosion.width = 250;
+                        explosion.height = 250;
+                        explosion.x = 50 * x;
+                        explosion.y = 50 * y;
+                        app.stage.addChild(explosion);
+                    }
+                }
+            }
+        }
+    }
+
+    window.setInterval(getLatestMap, 500);
+    function getLatestMap() {
+        fetch('/latestMap').then(response => response.text().then(text => drawMap(text)));
+    }
+
+    window.setInterval(getLatestError, 500);
+    function getLatestError() {
+        let user = document.getElementById("userNameTextArea").value;
+        if (user != "") {
+            fetch('/getErrors/' + user).then(response => response.text().then(text => document.getElementById("errorsTextArea").value = text ));
+        }
+    }
+
+    function submitCode() {
+        if (document.getElementById("userNameTextArea").value == "") {
+            alert("username not set.");
+            return;
+        }
+        fetch('/postScript', { method: "POST", body: JSON.stringify({ "user": document.getElementById("userNameTextArea").value, "code": document.getElementById("codeTextArea").value }) });
+    }
+</script>
+Username:<textarea id="userNameTextArea"></textarea>
+<br>
+Code:<textarea style="width:500px;" rows="15" id="codeTextArea">
+-- 5% chance to explode all my bombs.
+if math.random() >= 0.95 and memory.bombs ~= nil then
+	for _, bomb in pairs(memory.bombs) do
+	  explode(bomb.id)
+	end
+	memory.bombs = {}
+end
+
+ship, err = my_ship()
+if err != 0 then  -- If ship is dead, then respawn it.
+    if memory.bombs ~= nil then memory.bombs = {} end  -- All of our bombs explode when we die.
+	create_ship(math.random(20), math.random(20))  -- Spawn on a random tile.
+end
+if ship then
+    mt = {-1, 0, 1}
+	ship:move(mt[math.random(#mt)], mt[math.random(#mt)])
+	
+	if math.random() >= 0.75 then  -- 25% chance to randomly put down a bomb.
+		bomb, err = ship:place_bomb()
+		if memory.bombs == nil then
+			memory.bombs = {}
+		end
+		if err == 0 then
+			table.insert(memory.bombs, bomb)
+		end
+	end
+end</textarea>
+<button onclick="submitCode()">Submit Code.</button>
+<br>
+Errors:<textarea style="width:250px;" rows="5" id="errorsTextArea"></textarea>

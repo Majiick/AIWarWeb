@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option csharp_namespace = "AIWarWeb.proto";
+
+package webtosimulation;
+
+message SubmitScriptRequest {
+	string username = 1;
+	string lua_script = 2;
+}
+
+message SubmitScriptReply {}
+
+service WebToSimulation {
+	rpc SubmitScript (SubmitScriptRequest) returns (SubmitScriptReply);
+}
