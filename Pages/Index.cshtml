@@ -4,6 +4,19 @@
     ViewData["Title"] = "Home page";
 }
 
+<head>
+    <style>
+        canvas {
+            float: left
+        }
+        #controlpanel {
+            display: flex;
+            justify-content: space-between;
+            float: right;
+        }
+    </style>
+</head>
+
 <script src="~/js/pixi.js"></script>
 
 <script type="text/javascript">
@@ -134,36 +147,40 @@
         fetch('/postScript', { method: "POST", body: JSON.stringify({ "user": document.getElementById("userNameTextArea").value, "code": document.getElementById("codeTextArea").value }) });
     }
 </script>
-Username:<textarea id="userNameTextArea"></textarea>
-<br>
-Code:<textarea style="width:500px;" rows="15" id="codeTextArea">
--- 5% chance to explode all my bombs.
-if math.random() >= 0.95 and memory.bombs ~= nil then
-	for _, bomb in pairs(memory.bombs) do
-	  explode(bomb.id)
-	end
-	memory.bombs = {}
-end
 
-ship, err = my_ship()
-if err != 0 then  -- If ship is dead, then respawn it.
-    if memory.bombs ~= nil then memory.bombs = {} end  -- All of our bombs explode when we die.
-	create_ship(math.random(20), math.random(20))  -- Spawn on a random tile.
-end
-if ship then
-    mt = {-1, 0, 1}
-	ship:move(mt[math.random(#mt)], mt[math.random(#mt)])
+
+<body>
+<div id="controlpanel">
+    Username:<textarea id="userNameTextArea"></textarea>
+    Code:<textarea style="width:500px;" rows="15" id="codeTextArea">
+    -- 5% chance to explode all my bombs.
+    if math.random() >= 0.95 and memory.bombs ~= nil then
+	    for _, bomb in pairs(memory.bombs) do
+	      explode(bomb.id)
+	    end
+	    memory.bombs = {}
+    end
+
+    ship, err = my_ship()
+    if err != 0 then  -- If ship is dead, then respawn it.
+        if memory.bombs ~= nil then memory.bombs = {} end  -- All of our bombs explode when we die.
+	    create_ship(math.random(20), math.random(20))  -- Spawn on a random tile.
+    end
+    if ship then
+        mt = {-1, 0, 1}
+	    ship:move(mt[math.random(#mt)], mt[math.random(#mt)])
 	
-	if math.random() >= 0.75 then  -- 25% chance to randomly put down a bomb.
-		bomb, err = ship:place_bomb()
-		if memory.bombs == nil then
-			memory.bombs = {}
-		end
-		if err == 0 then
-			table.insert(memory.bombs, bomb)
-		end
-	end
-end</textarea>
-<button onclick="submitCode()">Submit Code.</button>
-<br>
-Errors:<textarea style="width:250px;" rows="5" id="errorsTextArea"></textarea>
+	    if math.random() >= 0.75 then  -- 25% chance to randomly put down a bomb.
+		    bomb, err = ship:place_bomb()
+		    if memory.bombs == nil then
+			    memory.bombs = {}
+		    end
+		    if err == 0 then
+			    table.insert(memory.bombs, bomb)
+		    end
+	    end
+    end</textarea>
+    <button onclick="submitCode()">Submit Code.</button>
+    Errors:<textarea style="width:250px;" rows="5" id="errorsTextArea"></textarea>
+</div>
+</body>
