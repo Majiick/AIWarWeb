@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,13 +13,18 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
+using StackExchange.Redis;
 
 namespace AIWarWeb
 {
     public class Startup
     {
+        public ConnectionMultiplexer redis;
+
         public Startup(IConfiguration configuration) {
             Configuration = configuration;
+            redis = ConnectionMultiplexer.Connect("localhost:6379");
+            Debug.Assert(redis.IsConnected);
         }
 
         public IConfiguration Configuration { get; }
@@ -45,26 +51,34 @@ namespace AIWarWeb
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGet("/latestMap", async context => {
-                    string path = @"e:\tmp\latestMap.txt";
-                    await context.Response.WriteAsync(File.ReadAllText(path));
+                    string map = redis.GetDatabase().StringGet("latest_map");
+                    await context.Response.WriteAsync(map);
                 });
                 endpoints.MapPost("/postScript", async context => {
-                    string path = @"e:\tmp\scripts\";
                     string scriptJson = "";
                     using (var reader = new StreamReader(context.Request.Body)) {
                         scriptJson = await reader.ReadToEndAsync();
                     }
                     dynamic obj = JsonConvert.DeserializeObject(scriptJson);
-                    File.WriteAllText(path + (string)obj.user + ".lua", (string)obj.code);
+                    string redisKey = (string)obj.user + "_script";
+                    Debug.Assert(redis.GetDatabase().StringSet(redisKey, (string)obj.code));
                     await context.Response.WriteAsync("OK");
                 });
                 endpoints.MapGet("/getErrors/{playerName}", async context => {
-                    string path = @"e:\tmp\errors\" + context.Request.RouteValues["playerName"] + ".txt";
-                    if (File.Exists(path)) {
-                        await context.Response.WriteAsync(File.ReadAllText(path));
-                    } else {
-                        await context.Response.WriteAsync("");
+                    string key = context.Request.RouteValues["playerName"] + "_error";
+                    string err = redis.GetDatabase().StringGet(key);
+                    if (err == null) {
+                        err = "";
                     }
+                    await context.Response.WriteAsync(err);
+                });
+                endpoints.MapPost("/postOneOff", async context => {
+                    string scriptJson = "";
+                    using (var reader = new StreamReader(context.Request.Body)) {
+                        scriptJson = await reader.ReadToEndAsync();
+                    }
+                    redis.GetSubscriber().Publish("oneoff", scriptJson);
+                    await context.Response.WriteAsync("OK");
                 });
             });
             app.UseAuthorization();

@@ -77,6 +77,7 @@
         for (x = 0; x < map.length; x++) {
             for (y = 0; y < map[x].length; y++) {
                 for (iObj = 0; iObj < map[x][y].length; iObj++) {
+                    let myUser = document.getElementById("userNameTextArea").value;
                     let obj = map[x][y][iObj];
                     if (obj.type == "ship") {
                         let ship = new PIXI.Sprite(PIXI.loader.resources["images/ship.png"].texture);
@@ -86,14 +87,14 @@
                         ship.y = 50 * y;
                         app.stage.addChild(ship);
 
-                        var playerName = new PIXI.Text(obj.owner, { font: 'Arial', fill: '#cc00ff', align: 'center' });
+                        color = myUser == obj.owner ? 0x66ff66 : 0xff0000;
+                        var playerName = new PIXI.Text(obj.owner, { font: 'Arial', fill: color, align: 'center' });
                         playerName.x = 50 * x;
                         playerName.y = 50 * y + 25;
                         playerName.width = 49;
                         app.stage.addChild(playerName);
                     }
                     if (obj.type == "bomb") {
-                        let myUser = document.getElementById("userNameTextArea").value;
                         let bomb = new PIXI.Sprite(PIXI.loader.resources["images/bomb.png"].texture);
                         bomb.width = 49;
                         bomb.height = 49;
@@ -146,6 +147,14 @@
         }
         fetch('/postScript', { method: "POST", body: JSON.stringify({ "user": document.getElementById("userNameTextArea").value, "code": document.getElementById("codeTextArea").value }) });
     }
+
+    function submitOneOff() {
+        if (document.getElementById("userNameTextArea").value == "") {
+            alert("username not set.");
+            return;
+        }
+        fetch('/postOneOff', { method: "POST", body: JSON.stringify({ "user": document.getElementById("userNameTextArea").value, "code": document.getElementById("oneOffTextArea").value }) });
+    }
 </script>
 
 
@@ -181,6 +190,8 @@
 	    end
     end</textarea>
     <button onclick="submitCode()">Submit Code.</button>
+    OneOff:<textarea id="oneOffTextArea"></textarea>
+    <button onclick="submitOneOff()">Submit OneOff.</button>
     Errors:<textarea style="width:250px;" rows="5" id="errorsTextArea"></textarea>
 </div>
 </body>
