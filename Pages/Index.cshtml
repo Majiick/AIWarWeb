@@ -18,36 +18,47 @@
 </head>
 
 <script src="~/js/pixi.js"></script>
+<script src="~/js/viewport.js"></script>
 
 <script type="text/javascript">
     let type = "WebGL"
     if (!PIXI.utils.isWebGLSupported()) {
         type = "canvas"
     }
-
     PIXI.utils.sayHello(type)
 
     //Create a Pixi Application
-    let app = new PIXI.Application({
-        width: 1000,
-        height: 1000
-    });
-    app.renderer.autoResize = true;
-
-    //Add the canvas that Pixi automatically created for you to the HTML document
+    let app = new PIXI.Application();
     document.body.appendChild(app.view);
+    // create viewport
+    const viewport = new Viewport.Viewport({
+        screenWidth: window.innerWidth,
+        screenHeight: window.innerHeight,
+        worldWidth: 1000,
+        worldHeight: 1000,
+
+        interaction: app.renderer.plugins.interaction // the interaction module is important for wheel to work properly when renderer.view is placed or scaled
+    })
+
+    // add the viewport to the stage
+    app.stage.addChild(viewport)
+
+    // activate plugins
+    viewport
+        .drag()
+        .wheel()
 
     function drawGrid() {
         let myGraph = new PIXI.Graphics();
-        app.stage.addChild(myGraph);
+        viewport.addChild(myGraph);
         myGraph.position.set(0, 0);
-        for (x = 0; x < 1000; x += 50) {
-            myGraph.lineStyle(1, 0xffffff)
+        for (x = 0; x <= 1000; x += 50) {
+            myGraph.lineStyle(2, 0xffffff)
                 .moveTo(x, 0)
                 .lineTo(x, 1000);
         }
-        for (y = 0; y < 1000; y += 50) {
-            myGraph.lineStyle(1, 0xffffff)
+        for (y = 0; y <= 1000; y += 50) {
+            myGraph.lineStyle(2, 0xffffff)
                 .moveTo(0, y)
                 .lineTo(1000, y);
         }
@@ -71,6 +82,8 @@
         }
 
         app.stage = new PIXI.Container();
+        app.stage.addChild(viewport)
+        for (var i = viewport.children.length - 1; i >= 0; i--) { viewport.removeChild(viewport.children[i]); };
         drawGrid();
 
         var map = JSON.parse(mapJson);
@@ -85,14 +98,14 @@
                         ship.height = 49;
                         ship.x = 50 * x;
                         ship.y = 50 * y;
-                        app.stage.addChild(ship);
+                        viewport.addChild(ship);
 
                         color = myUser == obj.owner ? 0x66ff66 : 0xff0000;
                         var playerName = new PIXI.Text(obj.owner, { font: 'Arial', fill: color, align: 'center' });
                         playerName.x = 50 * x;
                         playerName.y = 50 * y + 25;
                         playerName.width = 49;
-                        app.stage.addChild(playerName);
+                        viewport.addChild(playerName);
                     }
                     if (obj.type == "bomb") {
                         let bomb = new PIXI.Sprite(PIXI.loader.resources["images/bomb.png"].texture);
@@ -100,10 +113,10 @@
                         bomb.height = 49;
                         bomb.x = 50 * x;
                         bomb.y = 50 * y;
-                        app.stage.addChild(bomb);
+                        viewport.addChild(bomb);
 
                         let myGraph = new PIXI.Graphics();
-                        app.stage.addChild(myGraph);
+                        viewport.addChild(myGraph);
                         myGraph.position.set(0, 0);
                         color = myUser == obj.owner ? 0x66ff66 : 0xff0000;
                         myGraph.lineStyle(2, color)
@@ -120,7 +133,7 @@
                         explosion.height = 250;
                         explosion.x = 50 * x;
                         explosion.y = 50 * y;
-                        app.stage.addChild(explosion);
+                        viewport.addChild(explosion);
                     }
                 }
             }
@@ -136,7 +149,7 @@
     function getLatestError() {
         let user = document.getElementById("userNameTextArea").value;
         if (user != "") {
-            fetch('/getErrors/' + user).then(response => response.text().then(text => document.getElementById("errorsTextArea").value = text ));
+            fetch('/getSTDOUT/' + user).then(response => response.text().then(text => document.getElementById("stdoutTextArea").value = text ));
         }
     }
 
@@ -165,13 +178,13 @@
     -- 5% chance to explode all my bombs.
     if math.random() >= 0.95 and memory.bombs ~= nil then
 	    for _, bomb in pairs(memory.bombs) do
-	      explode(bomb.id)
+	        explode(bomb.id)
 	    end
 	    memory.bombs = {}
     end
 
     ship, err = my_ship()
-    if err != 0 then  -- If ship is dead, then respawn it.
+    if err ~= 0 then  -- If ship is dead, then respawn it.
         if memory.bombs ~= nil then memory.bombs = {} end  -- All of our bombs explode when we die.
 	    create_ship(math.random(20), math.random(20))  -- Spawn on a random tile.
     end
@@ -192,6 +205,6 @@
     <button onclick="submitCode()">Submit Code.</button>
     OneOff:<textarea id="oneOffTextArea"></textarea>
     <button onclick="submitOneOff()">Submit OneOff.</button>
-    Errors:<textarea style="width:250px;" rows="5" id="errorsTextArea"></textarea>
+    STDOUT:<textarea style="width:250px;" rows="5" id="stdoutTextArea"></textarea>
 </div>
 </body>

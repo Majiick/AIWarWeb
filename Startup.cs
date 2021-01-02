@@ -64,8 +64,8 @@ namespace AIWarWeb
                     Debug.Assert(redis.GetDatabase().StringSet(redisKey, (string)obj.code));
                     await context.Response.WriteAsync("OK");
                 });
-                endpoints.MapGet("/getErrors/{playerName}", async context => {
-                    string key = context.Request.RouteValues["playerName"] + "_error";
+                endpoints.MapGet("/getSTDOUT/{playerName}", async context => {
+                    string key = context.Request.RouteValues["playerName"] + "_stdout";
                     string err = redis.GetDatabase().StringGet(key);
                     if (err == null) {
                         err = "";
